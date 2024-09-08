@@ -2,7 +2,6 @@ package tmpltree
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,7 +26,7 @@ func TestNewTemplateNode(t *testing.T) {
 
 func TestBuildTemplateTree(t *testing.T) {
 	// Create a temporary directory structure for testing
-	tempDir, err := ioutil.TempDir("", "tmpltree_test")
+	tempDir, err := os.MkdirTemp("", "tmpltree_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -156,7 +155,7 @@ func createTestDirStructure(t *testing.T, root string) {
 	}
 
 	for _, file := range files {
-		err := ioutil.WriteFile(filepath.Join(root, file), []byte("test content"), 0644)
+		err := os.WriteFile(filepath.Join(root, file), []byte("test content"), 0644)
 		if err != nil {
 			t.Fatalf("Failed to create file %s: %v", file, err)
 		}
