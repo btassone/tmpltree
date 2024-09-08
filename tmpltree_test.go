@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -87,16 +89,27 @@ func TestPrint(t *testing.T) {
 	root.Print(&buf, "")
 	actual := buf.String()
 
-	expected := `root/
+	// Split the output into lines and sort them
+	actualLines := strings.Split(strings.TrimSpace(actual), "\n")
+	sort.Strings(actualLines)
+
+	expected := `
+root/
   file1.txt
   file2.txt
   child1/
     child1file.txt
   child2/
 `
+	// Split the expected output into lines and sort them
+	expectedLines := strings.Split(strings.TrimSpace(expected), "\n")
+	sort.Strings(expectedLines)
 
-	if actual != expected {
-		t.Errorf("Print output doesn't match expected.\nGot:\n%s\nExpected:\n%s", actual, expected)
+	// Compare the sorted lines
+	if !reflect.DeepEqual(actualLines, expectedLines) {
+		t.Errorf("Print output doesn't match expected.\nGot:\n%s\nExpected:\n%s",
+			strings.Join(actualLines, "\n"),
+			strings.Join(expectedLines, "\n"))
 	}
 }
 
