@@ -166,6 +166,13 @@ func TestNewTemplateManager(t *testing.T) {
 		"admin": filepath.Join(tempDir, "layouts", "admin.html"),
 	}
 
+	// Store the original implementation
+	originalNewTemplateManagerImpl := NewTemplateManagerImpl
+
+	// Restore the original implementation at the end of the test
+	defer func() { NewTemplateManagerImpl = originalNewTemplateManagerImpl }()
+
+	// Test the actual implementation
 	tm, err := NewTemplateManager(tempDir, baseTemplates)
 	if err != nil {
 		t.Fatalf("NewTemplateManager failed: %v", err)
@@ -177,6 +184,22 @@ func TestNewTemplateManager(t *testing.T) {
 
 	if !reflect.DeepEqual(tm.BaseTemplates, baseTemplates) {
 		t.Errorf("BaseTemplates don't match. Got %v, want %v", tm.BaseTemplates, baseTemplates)
+	}
+
+	// Test with a mock implementation
+	mockCalled := false
+	NewTemplateManagerImpl = func(rootDir string, baseTemplates map[string]string) (*TemplateManager, error) {
+		mockCalled = true
+		return &TemplateManager{}, nil
+	}
+
+	_, err = NewTemplateManager(tempDir, baseTemplates)
+	if err != nil {
+		t.Fatalf("Mock NewTemplateManager failed: %v", err)
+	}
+
+	if !mockCalled {
+		t.Error("Mock implementation was not called")
 	}
 }
 
