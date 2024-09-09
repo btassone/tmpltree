@@ -10,7 +10,8 @@
 - Navigate the tree structure programmatically
 - Print the tree structure for visualization
 - Easily retrieve specific nodes in the tree
-- Render templates with support for base layouts
+- Render templates with support for multiple base layouts
+- Manage templates with a `TemplateManager`
 
 ## Installation
 
@@ -28,6 +29,7 @@ Here's a quick example of how to use the `tmpltree` package:
 package main
 
 import (
+    "bytes"
     "fmt"
     "log"
     "os"
@@ -36,28 +38,34 @@ import (
 )
 
 func main() {
-    // Build the template tree
-    root, err := tmpltree.BuildTemplateTree("./templates")
+    // Define base templates
+    baseTemplates := map[string]string{
+        "base":  "./templates/layouts/base.html",
+        "admin": "./templates/layouts/admin.html",
+    }
+
+    // Create a new TemplateManager
+    tm, err := tmpltree.NewTemplateManager("./templates", baseTemplates)
     if err != nil {
-        log.Fatalf("Error building template tree: %v", err)
+        log.Fatalf("Error creating TemplateManager: %v", err)
     }
 
     // Print the tree structure
     fmt.Println("Template Structure:")
-    root.Print(os.Stdout, "")
+    tm.Root.Print(os.Stdout, "")
 
     // Access specific nodes
-    if usersPage, ok := root.GetNode("pages", "users"); ok {
+    if usersPage, ok := tm.Root.GetNode("pages", "users"); ok {
         fmt.Println("\nUsers page files:", usersPage.Files)
     }
 
-    if layouts, ok := root.GetNode("layouts"); ok {
+    if layouts, ok := tm.Root.GetNode("layouts"); ok {
         fmt.Println("Layout files:", layouts.Files)
     }
 
     // Render a template
     var buf bytes.Buffer
-    err = root.RenderTemplate("pages/index", "./templates/layouts/base.html", &buf, nil)
+    err = tm.RenderTemplate("pages/index", "base", &buf, nil)
     if err != nil {
         log.Fatalf("Error rendering template: %v", err)
     }
@@ -82,11 +90,26 @@ type TemplateNode struct {
 }
 ```
 
+#### `TemplateManager`
+
+Manages the template tree and base templates.
+
+```go
+type TemplateManager struct {
+    Root          *TemplateNode
+    BaseTemplates map[string]string
+}
+```
+
 ### Functions
 
 #### `NewTemplateNode(name string, path string) *TemplateNode`
 
 Creates a new `TemplateNode`.
+
+#### `NewTemplateManager(rootDir string, baseTemplates map[string]string) (*TemplateManager, error)`
+
+Creates a new `TemplateManager`.
 
 #### `BuildTemplateTree(rootDir string) (*TemplateNode, error)`
 
@@ -102,9 +125,9 @@ Prints the template tree structure to the provided writer.
 
 Retrieves a specific node from the template tree.
 
-#### `(n *TemplateNode) RenderTemplate(tmplPath string, baseTemplatePath string, w io.Writer, data interface{}) error`
+#### `(tm *TemplateManager) RenderTemplate(tmplPath string, baseTemplateName string, w io.Writer, data interface{}) error`
 
-Renders a template with the given path, using a base template.
+Renders a template with the given path, using a specified base template.
 
 ## Directory Structure
 
