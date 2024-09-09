@@ -2,7 +2,9 @@ package tmpltree
 
 import (
 	"fmt"
+	"html/template"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,9 +82,17 @@ func BuildTemplateTree(rootDir string) (*TemplateNode, error) {
 
 // Print prints the template tree structure to the provided writer
 func (n *TemplateNode) Print(w io.Writer, indent string) {
-	fmt.Fprintf(w, "%s%s/\n", indent, n.Name)
+	_, err := fmt.Fprintf(w, "%s%s/\n", indent, n.Name)
+	if err != nil {
+		log.Print(err)
+		return
+	}
 	for _, file := range n.Files {
-		fmt.Fprintf(w, "%s  %s\n", indent, file)
+		_, err := fmt.Fprintf(w, "%s  %s\n", indent, file)
+		if err != nil {
+			log.Print(err)
+			return
+		}
 	}
 	for _, child := range n.Children {
 		child.Print(w, indent+"  ")
@@ -100,4 +110,39 @@ func (n *TemplateNode) GetNode(path ...string) (*TemplateNode, bool) {
 		}
 	}
 	return current, true
+}
+
+// RenderTemplate renders a template with the given path
+func (n *TemplateNode) RenderTemplate(tmplPath string, baseTemplatePath string, w io.Writer, data interface{}) error {
+	parts := strings.Split(tmplPath, "/")
+	node, ok := n.GetNode(parts[:len(parts)-1]...)
+	if !ok {
+		return fmt.Errorf("template node not found for path: %s", tmplPath)
+	}
+
+	fileName := parts[len(parts)-1] + ".html"
+	found := false
+	for _, file := range node.Files {
+		if file == fileName {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("template file not found: %s", fileName)
+	}
+
+	fullPath := filepath.Join(node.Path, fileName)
+
+	tmpl, err := template.ParseFiles(baseTemplatePath, fullPath)
+	if err != nil {
+		return fmt.Errorf("error parsing template: %v", err)
+	}
+
+	if err := tmpl.Execute(w, data); err != nil {
+		return fmt.Errorf("error executing template: %v", err)
+	}
+
+	return nil
 }
