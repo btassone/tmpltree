@@ -34,8 +34,11 @@ func NewTemplateNode(name string, path string) *TemplateNode {
 	}
 }
 
-// NewTemplateManager creates a new TemplateManager
-func NewTemplateManager(rootDir string, baseTemplates map[string]string) (*TemplateManager, error) {
+// NewTemplateManagerFunc is a function type for creating a new TemplateManager
+type NewTemplateManagerFunc func(rootDir string, baseTemplates map[string]string) (*TemplateManager, error)
+
+// NewTemplateManagerImpl is the actual implementation of NewTemplateManager
+var NewTemplateManagerImpl NewTemplateManagerFunc = func(rootDir string, baseTemplates map[string]string) (*TemplateManager, error) {
 	root, err := BuildTemplateTree(rootDir)
 	if err != nil {
 		return nil, err
@@ -45,6 +48,11 @@ func NewTemplateManager(rootDir string, baseTemplates map[string]string) (*Templ
 		Root:          root,
 		BaseTemplates: baseTemplates,
 	}, nil
+}
+
+// NewTemplateManager creates a new TemplateManager
+func NewTemplateManager(rootDir string, baseTemplates map[string]string) (*TemplateManager, error) {
+	return NewTemplateManagerImpl(rootDir, baseTemplates)
 }
 
 // BuildTemplateTree constructs a tree structure of the template directory
