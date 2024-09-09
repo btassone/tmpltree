@@ -1,5 +1,7 @@
 # tmpltree
 
+[![Go Tests](https://github.com/btassone/tmpltree/actions/workflows/go.yml/badge.svg)](https://github.com/btassone/tmpltree/actions/workflows/go.yml)
+
 `tmpltree` is a Go package that provides functionality to build and manage a tree structure representation of template directories. It's particularly useful for projects that need to organize and navigate template files in a hierarchical manner.
 
 ## Features
