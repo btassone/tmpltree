@@ -2,6 +2,7 @@ package tmpltree
 
 import (
 	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -9,6 +10,143 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestRenderTemplate(t *testing.T) {
+	// Create a temporary directory structure for testing
+	tempDir, err := os.MkdirTemp("", "tmpltree_render_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(tempDir)
+
+	// Create test directory structure
+	createTestDirStructure(t, tempDir)
+
+	// Create a base template
+	baseTemplatePath := filepath.Join(tempDir, "layouts", "base.html")
+	baseTemplateContent := `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{template "title" .}}</title>
+</head>
+<body>
+    {{template "content" .}}
+</body>
+</html>
+`
+	err = os.WriteFile(baseTemplatePath, []byte(baseTemplateContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create base template: %v", err)
+	}
+
+	// Create a test page template
+	testPagePath := filepath.Join(tempDir, "pages", "test.html")
+	testPageContent := `
+{{define "title"}}Test Page{{end}}
+{{define "content"}}
+<h1>Test Page</h1>
+<p>Hello, {{.Name}}!</p>
+{{end}}
+`
+	err = os.WriteFile(testPagePath, []byte(testPageContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test page template: %v", err)
+	}
+
+	// Build the template tree
+	root, err := BuildTemplateTree(tempDir)
+	if err != nil {
+		t.Fatalf("BuildTemplateTree failed: %v", err)
+	}
+
+	// Test rendering the template
+	var buf bytes.Buffer
+	err = root.RenderTemplate("pages/test", baseTemplatePath, &buf, struct{ Name string }{"World"})
+	if err != nil {
+		t.Fatalf("RenderTemplate failed: %v", err)
+	}
+
+	expected := `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page</title>
+</head>
+<body>
+    
+<h1>Test Page</h1>
+<p>Hello, World!</p>
+
+</body>
+</html>
+`
+
+	if strings.TrimSpace(buf.String()) != strings.TrimSpace(expected) {
+		t.Errorf("RenderTemplate output doesn't match expected.\nGot:\n%s\nExpected:\n%s", buf.String(), expected)
+	}
+}
+
+func TestRenderTemplateErrors(t *testing.T) {
+	// Create a temporary directory structure for testing
+	tempDir, err := os.MkdirTemp("", "tmpltree_render_error_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}(tempDir)
+
+	// Create test directory structure
+	createTestDirStructure(t, tempDir)
+
+	// Build the template tree
+	root, err := BuildTemplateTree(tempDir)
+	if err != nil {
+		t.Fatalf("BuildTemplateTree failed: %v", err)
+	}
+
+	tests := []struct {
+		name             string
+		tmplPath         string
+		baseTemplatePath string
+		expectedError    string
+	}{
+		{
+			name:             "Non-existent template",
+			tmplPath:         "pages/nonexistent",
+			baseTemplatePath: filepath.Join(tempDir, "layouts", "base.html"),
+			expectedError:    "template file not found: nonexistent.html",
+		},
+		{
+			name:             "Non-existent base template",
+			tmplPath:         "pages/index",
+			baseTemplatePath: filepath.Join(tempDir, "layouts", "nonexistent.html"),
+			expectedError:    "error parsing template",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			err := root.RenderTemplate(tt.tmplPath, tt.baseTemplatePath, &buf, nil)
+			if err == nil {
+				t.Errorf("Expected an error, but got nil")
+			} else if !strings.Contains(err.Error(), tt.expectedError) {
+				t.Errorf("Expected error containing '%s', but got '%s'", tt.expectedError, err.Error())
+			}
+		})
+	}
+}
 
 func TestNewTemplateNode(t *testing.T) {
 	node := NewTemplateNode("test", "/path/to/test")
@@ -32,7 +170,13 @@ func TestBuildTemplateTree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}(tempDir)
 
 	// Create test directory structure
 	createTestDirStructure(t, tempDir)
