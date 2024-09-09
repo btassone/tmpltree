@@ -18,6 +18,12 @@ type TemplateNode struct {
 	Files    []string
 }
 
+// TemplateManager manages the template tree and base templates
+type TemplateManager struct {
+	Root          *TemplateNode
+	BaseTemplates map[string]string
+}
+
 // NewTemplateNode creates a new TemplateNode
 func NewTemplateNode(name string, path string) *TemplateNode {
 	return &TemplateNode{
@@ -26,6 +32,19 @@ func NewTemplateNode(name string, path string) *TemplateNode {
 		Children: make(map[string]*TemplateNode),
 		Files:    []string{},
 	}
+}
+
+// NewTemplateManager creates a new TemplateManager
+func NewTemplateManager(rootDir string, baseTemplates map[string]string) (*TemplateManager, error) {
+	root, err := BuildTemplateTree(rootDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TemplateManager{
+		Root:          root,
+		BaseTemplates: baseTemplates,
+	}, nil
 }
 
 // BuildTemplateTree constructs a tree structure of the template directory
@@ -112,10 +131,10 @@ func (n *TemplateNode) GetNode(path ...string) (*TemplateNode, bool) {
 	return current, true
 }
 
-// RenderTemplate renders a template with the given path
-func (n *TemplateNode) RenderTemplate(tmplPath string, baseTemplatePath string, w io.Writer, data interface{}) error {
+// RenderTemplate renders a template with the given path and base template
+func (tm *TemplateManager) RenderTemplate(tmplPath string, baseTemplateName string, w io.Writer, data interface{}) error {
 	parts := strings.Split(tmplPath, "/")
-	node, ok := n.GetNode(parts[:len(parts)-1]...)
+	node, ok := tm.Root.GetNode(parts[:len(parts)-1]...)
 	if !ok {
 		return fmt.Errorf("template node not found for path: %s", tmplPath)
 	}
@@ -134,6 +153,11 @@ func (n *TemplateNode) RenderTemplate(tmplPath string, baseTemplatePath string, 
 	}
 
 	fullPath := filepath.Join(node.Path, fileName)
+
+	baseTemplatePath, ok := tm.BaseTemplates[baseTemplateName]
+	if !ok {
+		return fmt.Errorf("base template not found: %s", baseTemplateName)
+	}
 
 	tmpl, err := template.ParseFiles(baseTemplatePath, fullPath)
 	if err != nil {
