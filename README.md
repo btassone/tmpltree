@@ -8,6 +8,7 @@
 - Navigate the tree structure programmatically
 - Print the tree structure for visualization
 - Easily retrieve specific nodes in the tree
+- Render templates with support for base layouts
 
 ## Installation
 
@@ -51,6 +52,14 @@ func main() {
     if layouts, ok := root.GetNode("layouts"); ok {
         fmt.Println("Layout files:", layouts.Files)
     }
+
+    // Render a template
+    var buf bytes.Buffer
+    err = root.RenderTemplate("pages/index", "./templates/layouts/base.html", &buf, nil)
+    if err != nil {
+        log.Fatalf("Error rendering template: %v", err)
+    }
+    fmt.Println("\nRendered template:\n", buf.String())
 }
 ```
 
@@ -90,6 +99,10 @@ Prints the template tree structure to the provided writer.
 #### `(n *TemplateNode) GetNode(path ...string) (*TemplateNode, bool)`
 
 Retrieves a specific node from the template tree.
+
+#### `(n *TemplateNode) RenderTemplate(tmplPath string, baseTemplatePath string, w io.Writer, data interface{}) error`
+
+Renders a template with the given path, using a base template.
 
 ## Directory Structure
 
